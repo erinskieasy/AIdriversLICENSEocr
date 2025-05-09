@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot, Copy, AlertCircle, Loader2 } from "lucide-react";
 import JsonViewer from "@/components/ui/json-viewer";
+import { useRef } from "react";
 
 interface ResponseSectionProps {
   response: any;
@@ -16,6 +17,29 @@ export default function ResponseSection({
   error,
   onCopyResponse,
 }: ResponseSectionProps) {
+  // Reference to the JSON viewer content for direct copying
+  const jsonViewerRef = useRef<HTMLPreElement>(null);
+  
+  // Custom copy handler to copy the extracted JSON directly from the display
+  const handleCopy = () => {
+    if (jsonViewerRef.current) {
+      const displayedContent = jsonViewerRef.current.textContent || "";
+      
+      navigator.clipboard.writeText(displayedContent)
+        .then(() => {
+          console.log("[ResponseSection] Copied displayed JSON content");
+          // Call the original copy handler for toast notifications
+          onCopyResponse();
+        })
+        .catch(err => {
+          console.error("[ResponseSection] Error copying content:", err);
+        });
+    } else {
+      // Fallback to the parent component's copy function
+      onCopyResponse();
+    }
+  };
+
   return (
     <section>
       <Card>
@@ -51,14 +75,16 @@ export default function ResponseSection({
                   variant="ghost"
                   size="sm"
                   className="text-sm text-primary hover:text-blue-700"
-                  onClick={onCopyResponse}
+                  onClick={handleCopy}
                 >
                   <Copy className="h-4 w-4 mr-1" />
                   Copy
                 </Button>
               </div>
               <div className="p-4 overflow-auto max-h-[400px]">
-                <JsonViewer data={response} />
+                <div ref={jsonViewerRef}>
+                  <JsonViewer data={response} />
+                </div>
               </div>
             </div>
           ) : (

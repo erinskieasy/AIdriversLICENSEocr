@@ -77,7 +77,7 @@ export async function processImagesWithOpenAI(
     // Using OpenAI's required format for messages
     const textContent = {
       type: "text" as const,
-      text: "Please analyze these images according to you knowledge base and provide a detailed JSON response with your findings."
+      //text: "Please analyze these images according to you knowledge base and provide a detailed JSON response with your findings."
     };
     
     const imageContents = files.map((file, index) => ({
@@ -100,7 +100,7 @@ export async function processImagesWithOpenAI(
     console.log(`[OpenAI Service] Starting assistant run with assistant ID: ${assistantId}`);
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistantId,
-      instructions: "Analyze the uploaded images and provide a comprehensive JSON response. Structure your analysis with keys for 'objects', 'scene', 'colors', 'text', and any other relevant attributes. Be detailed but structured.",
+      //instructions: "Please analyze these images according to you knowledge base and provide a detailed JSON response with your findings.",
       response_format: { type: "json_object" },
     });
     console.log(`[OpenAI Service] Run created with ID: ${run.id}`);
