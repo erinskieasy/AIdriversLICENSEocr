@@ -1,11 +1,20 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ConfigurationSection from "@/components/configuration-section";
 import ImageUploadSection from "@/components/image-upload-section";
 import ResponseSection from "@/components/response-section";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ConfigState, FileWithPreview, OpenAIResponse } from "@/lib/types";
+
+// Helper function for consistent logging
+const log = (message: string, data?: any) => {
+  if (data) {
+    console.log(`[Client] ${message}`, data);
+  } else {
+    console.log(`[Client] ${message}`);
+  }
+};
 
 export default function Home() {
   // State management for configuration (API key and Assistant ID)
@@ -29,20 +38,41 @@ export default function Home() {
   // Toast notifications hook for user feedback
   const { toast } = useToast();
 
+  // Log component mount
+  useEffect(() => {
+    log("Home component mounted");
+    
+    return () => {
+      log("Home component unmounted");
+    };
+  }, []);
+
   // Handler for updating configuration values (API key or Assistant ID)
   const handleConfigChange = (key: keyof ConfigState, value: string) => {
+    log(`Config changed: ${key}`, key === 'apiKey' ? '(masked)' : value);
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
   // Handler for updating the list of uploaded files
   const handleFileChange = (newFiles: FileWithPreview[]) => {
+    log(`Files changed, new count: ${newFiles.length}`);
+    if (newFiles.length > 0) {
+      log("Files information:", newFiles.map(f => ({
+        name: f.name,
+        type: f.type,
+        size: f.size
+      })));
+    }
     setFiles(newFiles);
   };
 
   // Main function to process images with OpenAI
   const processImages = async () => {
+    log("Process images started");
+    
     // Validate configuration
     if (!config.apiKey || !config.assistantId) {
+      log("Missing configuration, showing error toast");
       toast({
         title: "Missing configuration",
         description: "Please enter your API Key and Assistant ID",
@@ -53,6 +83,7 @@ export default function Home() {
 
     // Validate file uploads
     if (files.length === 0) {
+      log("No files selected, showing error toast");
       toast({
         title: "No files selected",
         description: "Please select at least one image file",
@@ -61,6 +92,8 @@ export default function Home() {
       return;
     }
 
+    log(`Starting request with ${files.length} files and assistant ID: ${config.assistantId}`);
+    
     // Reset states before processing
     setIsLoading(true);
     setError(null);
@@ -68,32 +101,42 @@ export default function Home() {
 
     try {
       // Create FormData to send files and configuration
+      log("Creating FormData object");
       const formData = new FormData();
       formData.append("apiKey", config.apiKey);
       formData.append("assistantId", config.assistantId);
       
       // Append all selected files to FormData
-      files.forEach((file) => {
+      log(`Appending ${files.length} files to FormData`);
+      files.forEach((file, index) => {
+        log(`Adding file ${index + 1}/${files.length}: ${file.name} (${file.size} bytes)`);
         formData.append("files", file);
       });
 
       // Send POST request to backend API
+      log("Sending fetch request to /api/process-images");
       const res = await fetch("/api/process-images", {
         method: "POST",
         body: formData,
       });
 
+      log(`Response received with status: ${res.status} ${res.statusText}`);
+      
       // Handle non-200 responses
       if (!res.ok) {
         const errorText = await res.text();
+        log(`Error response: ${errorText || res.statusText}`);
         throw new Error(errorText || res.statusText);
       }
 
       // Parse response data
+      log("Parsing JSON response");
       const data: OpenAIResponse = await res.json();
+      log("Response parsed successfully", { hasError: !!data.error, hasData: !!data.data });
       
       // Handle API-level errors
       if (data.error) {
+        log(`Error in response: ${data.error}`);
         setError(data.error);
         toast({
           title: "Error processing images",
@@ -102,6 +145,10 @@ export default function Home() {
         });
       } else {
         // Store successful response
+        log("Success response received", { 
+          dataType: typeof data.data, 
+          dataKeys: data.data ? Object.keys(data.data) : [] 
+        });
         setResponse(data.data);
         toast({
           title: "Success",
@@ -110,6 +157,7 @@ export default function Home() {
       }
     } catch (err: any) {
       // Handle any other errors
+      log(`Error caught: ${err.message}`, err);
       setError(err.message);
       toast({
         title: "Error processing images",
@@ -117,19 +165,31 @@ export default function Home() {
         variant: "destructive",
       });
     } finally {
+      log("Request completed, setting isLoading to false");
       setIsLoading(false);
     }
   };
 
   // Helper function to copy response JSON to clipboard
   const copyResponseToClipboard = () => {
+    log("Copying response to clipboard");
     if (response) {
-      navigator.clipboard.writeText(JSON.stringify(response, null, 2)).then(() => {
-        toast({
-          title: "Copied to clipboard",
-          description: "Response copied to clipboard",
+      navigator.clipboard.writeText(JSON.stringify(response, null, 2))
+        .then(() => {
+          log("Response copied to clipboard successfully");
+          toast({
+            title: "Copied to clipboard",
+            description: "Response copied to clipboard",
+          });
+        })
+        .catch(err => {
+          log(`Error copying to clipboard: ${err.message}`);
+          toast({
+            title: "Error",
+            description: "Failed to copy to clipboard",
+            variant: "destructive",
+          });
         });
-      });
     }
   };
 
