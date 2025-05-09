@@ -18,7 +18,7 @@ export default function ResponseSection({
   onCopyResponse,
 }: ResponseSectionProps) {
   // Reference to the JSON viewer content for direct copying
-  const jsonViewerRef = useRef<HTMLDivElement>(null);
+  const jsonViewerRef = useRef<HTMLPreElement>(null);
   
   // Custom copy handler to copy the extracted JSON directly from the display
   const handleCopy = () => {

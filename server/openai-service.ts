@@ -77,9 +77,7 @@ export async function processImagesWithOpenAI(
     // Using OpenAI's required format for messages
     const textContent = {
       type: "text" as const,
-      text: {
-        value: "Please analyze these images and provide a detailed JSON response with your findings. Include any relevant information about objects, people, scenes, text, colors, or other elements in the images."
-      }
+      //text: "Please analyze these images according to you knowledge base and provide a detailed JSON response with your findings."
     };
     
     const imageContents = files.map((file, index) => ({
