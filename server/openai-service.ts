@@ -73,27 +73,28 @@ export async function processImagesWithOpenAI(
     // Add a message to the thread with all the images
     console.log("[OpenAI Service] Adding message with images to thread");
     
-    // Create properly typed content for the message
-    // Using OpenAI's required format for messages
-    const textContent = {
-      type: "text" as const,
-      //text: "Please analyze these images according to you knowledge base and provide a detailed JSON response with your findings."
-    };
-    
-    const imageContents = files.map((file, index) => ({
-      type: "image_file" as const,
-      image_file: { file_id: fileIds[index] }
-    }));
-    
-    // Combine text and image content in the format OpenAI expects
-    const messageContent = [textContent, ...imageContents];
-    
-    console.log("[OpenAI Service] Message content created with 1 text part and", imageContents.length, "image parts");
-
+    // First create a text message
+    console.log("[OpenAI Service] Creating text message");
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: messageContent,
+      content: "Please analyze these images and provide a detailed JSON response with your findings. Include any relevant information about objects, people, scenes, text, colors, or other elements in the images."
     });
+    
+    // Then add each image in separate messages
+    console.log(`[OpenAI Service] Adding ${fileIds.length} image messages`);
+    for (let i = 0; i < fileIds.length; i++) {
+      console.log(`[OpenAI Service] Adding image ${i+1}/${fileIds.length}`);
+      // For image files, we need to specify the correct content format
+      const imageContent = {
+        type: "image_file" as const, 
+        image_file: { file_id: fileIds[i] }
+      };
+      
+      await openai.beta.threads.messages.create(thread.id, {
+        role: "user",
+        content: [imageContent]
+      });
+    }
     console.log("[OpenAI Service] Message with images added to thread");
 
     // Run the assistant
