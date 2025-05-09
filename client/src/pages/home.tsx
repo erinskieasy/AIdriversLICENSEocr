@@ -146,9 +146,10 @@ export default function Home() {
       } else {
         // Store successful response
         log("Success response received", { 
-          dataType: typeof data.data, 
-          dataKeys: data.data ? Object.keys(data.data) : [] 
+          dataType: typeof data.data,
+          responseLength: typeof data.data === 'string' ? data.data.length : 'unknown'
         });
+        // Pass the raw response directly to be displayed
         setResponse(data.data);
         toast({
           title: "Success",
@@ -170,11 +171,16 @@ export default function Home() {
     }
   };
 
-  // Helper function to copy response JSON to clipboard
+  // Helper function to copy response to clipboard
   const copyResponseToClipboard = () => {
     log("Copying response to clipboard");
     if (response) {
-      navigator.clipboard.writeText(JSON.stringify(response, null, 2))
+      // Handle both string and object types
+      const textToCopy = typeof response === 'string' 
+        ? response 
+        : JSON.stringify(response, null, 2);
+        
+      navigator.clipboard.writeText(textToCopy)
         .then(() => {
           log("Response copied to clipboard successfully");
           toast({

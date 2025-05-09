@@ -77,7 +77,7 @@ export async function processImagesWithOpenAI(
     // Using OpenAI's required format for messages
     const textContent = {
       type: "text" as const,
-      text: "Please analyze these images and provide a detailed JSON response with your findings. Include any relevant information about objects, people, scenes, text, colors, or other elements in the images."
+      text: "Please analyze these images according to you knowledge base and provide a detailed JSON response with your findings."
     };
     
     const imageContents = files.map((file, index) => ({
@@ -157,28 +157,18 @@ export async function processImagesWithOpenAI(
     const latestMessage = assistantMessages[0];
     console.log(`[OpenAI Service] Latest message ID: ${latestMessage.id}`);
     
-    // Parse JSON from the text content
-    let jsonResponse = null;
+    // Get the raw text content without attempting to parse it
+    let rawResponse = null;
     
-    console.log(`[OpenAI Service] Parsing message content with ${latestMessage.content.length} content parts`);
+    console.log(`[OpenAI Service] Processing message content with ${latestMessage.content.length} content parts`);
     for (const contentPart of latestMessage.content) {
       console.log(`[OpenAI Service] Content part type: ${contentPart.type}`);
       if (contentPart.type === "text") {
-        try {
-          // The newest OpenAI model is "gpt-4o" which was released May 13, 2024. 
-          // We expect it to return proper JSON due to response_format setting
-          const contentText = contentPart.text.value;
-          console.log(`[OpenAI Service] Parsing JSON from text content (${contentText.length} chars)`);
-          jsonResponse = JSON.parse(contentText);
-          console.log("[OpenAI Service] JSON parsed successfully");
-          break;
-        } catch (error) {
-          const err = error as Error;
-          console.error(`[OpenAI Service] Error parsing JSON: ${err.message}`);
-          // If there's an error parsing the JSON, use the text content directly
-          jsonResponse = { text: contentPart.text.value };
-          console.log("[OpenAI Service] Using text content as fallback");
-        }
+        const contentText = contentPart.text.value;
+        console.log(`[OpenAI Service] Got text content (${contentText.length} chars)`);
+        rawResponse = contentText;
+        console.log("[OpenAI Service] Using raw text content from OpenAI");
+        break;
       }
     }
 
@@ -198,7 +188,7 @@ export async function processImagesWithOpenAI(
 
     console.log("[OpenAI Service] Processing completed successfully");
     return {
-      data: jsonResponse,
+      data: rawResponse,
     };
   } catch (error: any) {
     console.error("[OpenAI Service] Processing error:", error);
