@@ -70,31 +70,23 @@ export async function processImagesWithOpenAI(
     const thread = await openai.beta.threads.create();
     console.log(`[OpenAI Service] Thread created with ID: ${thread.id}`);
 
-    // Add a message to the thread with all the images
+    // Add a message with just the images to the thread
     console.log("[OpenAI Service] Adding message with images to thread");
     
-    // First create a text message
-    console.log("[OpenAI Service] Creating text message");
+    // Add all images in a single message without any text
+    console.log(`[OpenAI Service] Creating message with ${fileIds.length} images`);
+    
+    // Create an array of image content objects
+    const imageContents = fileIds.map(fileId => ({
+      type: "image_file" as const,
+      image_file: { file_id: fileId }
+    }));
+    
+    // Send a single message with all images
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: "Please analyze these images and provide a detailed JSON response with your findings. Include any relevant information about objects, people, scenes, text, colors, or other elements in the images."
+      content: imageContents
     });
-    
-    // Then add each image in separate messages
-    console.log(`[OpenAI Service] Adding ${fileIds.length} image messages`);
-    for (let i = 0; i < fileIds.length; i++) {
-      console.log(`[OpenAI Service] Adding image ${i+1}/${fileIds.length}`);
-      // For image files, we need to specify the correct content format
-      const imageContent = {
-        type: "image_file" as const, 
-        image_file: { file_id: fileIds[i] }
-      };
-      
-      await openai.beta.threads.messages.create(thread.id, {
-        role: "user",
-        content: [imageContent]
-      });
-    }
     console.log("[OpenAI Service] Message with images added to thread");
 
     // Run the assistant
