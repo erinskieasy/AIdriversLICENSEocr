@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { processImagesWithOpenAI } from "./openai-service";
+import { spawn } from "child_process";
+import fs from "fs";
+import path from "path";
 
 // Extend the Express Request interface to support multer's req.files
 // Note: We're not overriding the original definition, just adding a custom property
@@ -89,6 +92,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({
           error: error.message || "An error occurred while processing the images",
         });
+      }
+    }
+  );
+
+  // OCR Driver License with PaddleOCR
+  app.post(
+    "/api/paddle-ocr",
+    upload.single("file"),
+    async (req: Request, res: Response) => {
+      try {
+        const file = req.file as Express.Multer.File | undefined;
+        if (!file) {
+          return res.status(400).json({ error: "No image file uploaded" });
+        }
+
+        const tempPath = path.join("/tmp", `ocr_${Date.now()}_${file.originalname}`);
+        fs.writeFileSync(tempPath, file.buffer);
+
+        const script = path.join(__dirname, "paddle_ocr_driver.py");
+        const proc = spawn("python3", [script, tempPath]);
+
+        let out = "";
+        let err = "";
+
+        proc.stdout.on("data", (d) => {
+          out += d.toString();
+        });
+        proc.stderr.on("data", (d) => {
+          err += d.toString();
+        });
+
+        proc.on("close", (code) => {
+          fs.unlinkSync(tempPath);
+          if (code !== 0) {
+            return res.status(500).json({ error: err || "OCR process failed" });
+          }
+          try {
+            const data = JSON.parse(out);
+            return res.json({ data });
+          } catch (e) {
+            return res.status(500).json({ error: "Invalid OCR output" });
+          }
+        });
+      } catch (error: any) {
+        return res.status(500).json({ error: error.message });
       }
     }
   );
